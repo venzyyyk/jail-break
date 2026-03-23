@@ -1,0 +1,17 @@
+#!/bin/bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y zsh fzf bat eza ripgrep tmux curl wget git python3-pip
+sudo ln -sf /usr/bin/eza /usr/bin/exa
+sudo apt install -y nmap wireshark metasploit-framework sqlmap hydra john aircrack-ng gobuster ffuf nikto wpscan enum4linux smbclient impacket-scripts evil-winrm seclists wordlists exploitdb bettercap theharvester tor proxychains4
+if ! command -v go &> /dev/null; then
+    wget -q https://go.dev/dl/go1.22.0.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz
+    rm go1.22.0.linux-amd64.tar.gz
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.zshrc
+fi
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+echo 'alias nmap-full="sudo nmap -sS -sC -sV -O -p- -T4"' >> ~/.zshrc
+echo 'alias msfconsole="sudo msfconsole -q"' >> ~/.zshrc
+echo 'Готово. Перезагрузись: sudo reboot'

@@ -1,0 +1,133 @@
+cat > kali_setup.sh << 'EOF'
+#!/bin/bash
+
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+print_status() { echo -e "${BLUE}[*]${NC} $1"; }
+print_success() { echo -e "${GREEN}[+]${NC} $1"; }
+
+# Подготовка
+sudo dpkg --configure -a 2>/dev/null || true
+sudo apt --fix-broken install -y
+sudo apt update && sudo apt full-upgrade -y
+sudo apt autoremove --purge -y
+
+# Терминал
+sudo apt install -y --fix-missing zsh fzf bat eza ripgrep tmux curl wget git python3-pip
+sudo ln -sf /usr/bin/eza /usr/bin/exa
+
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
+    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
+fi
+
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting 2>/dev/null || true
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions 2>/dev/null || true
+sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting docker docker-compose tmux)/' ~/.zshrc
+
+cat > ~/.tmux.conf << 'TMUXEOF'
+set -g mouse on
+set -g history-limit 50000
+set -g default-terminal "screen-256color"
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+bind r source-file ~/.tmux.conf
+TMUXEOF
+
+# Инструменты
+sudo apt install -y --fix-missing \
+    nmap wireshark metasploit-framework burpsuite sqlmap hydra john hashcat \
+    aircrack-ng gobuster ffuf nikto wpscan enum4linux smbclient \
+    impacket-scripts bloodhound evil-winrm seclists wordlists exploitdb \
+    bettercap theharvester upx rlwrap netcat-traditional socat tor proxychains4 \
+    wifite kismet mdk4 hostapd dnsmasq feroxbuster whatweb gdb radare2 \
+    spiderfoot pspy ettercap-graphical dsniff macchanger responder \
+    medusa ncrack crowbar patator docker.io docker-compose
+
+# GO
+if ! command -v go &> /dev/null; then
+    wget -q https://go.dev/dl/go1.22.0.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz
+    rm go1.22.0.linux-amd64.tar.gz
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.zshrc
+    export PATH=$PATH:/usr/local/go/bin
+fi
+echo 'export PATH=$PATH:$HOME/go/bin' >> ~/.zshrc
+export PATH=$PATH:$HOME/go/bin
+
+# Go-утилиты
+go install github.com/tomnomnom/gf@latest 2>/dev/null || true
+go install github.com/projectdiscovery/httpx/cmd/httpx@latest 2>/dev/null || true
+go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest 2>/dev/null || true
+go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest 2>/dev/null || true
+go install github.com/OWASP/Amass/v3/...@master 2>/dev/null || true
+go install github.com/tomnomnom/waybackurls@latest 2>/dev/null || true
+go install github.com/hahwul/dalfox/v2@latest 2>/dev/null || true
+go install github.com/ropnop/kerbrute@latest 2>/dev/null || true
+go install github.com/jpillora/chisel@latest 2>/dev/null || true
+go install github.com/nicocha30/ligolo-ng@latest 2>/dev/null || true
+
+# PIP
+pip3 install xsstrike commix jwt-tool arjun paramspider crlfuzz maigret holehe instaloader pwntools
+
+# OSINT
+git clone https://github.com/sherlock-project/sherlock.git /opt/sherlock 2>/dev/null || true
+git clone https://github.com/laramies/theHarvester.git /opt/theHarvester 2>/dev/null || true
+cd /opt/theHarvester && pip3 install -r requirements.txt 2>/dev/null || true
+cd ~
+
+# Privesc
+git clone https://github.com/carlospolop/PEASS-ng.git /opt/peass 2>/dev/null || true
+git clone https://github.com/DominicBreuker/pspy.git /opt/pspy 2>/dev/null || true
+
+# Туннели
+wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+tar -xzf ngrok-v3-stable-linux-amd64.tgz
+sudo mv ngrok /usr/local/bin/
+rm ngrok-v3-stable-linux-amd64.tgz
+
+# Структура
+mkdir -p ~/pentest/{recon,exploit,privesc,reports,wordlists,tools,notes}
+mkdir -p ~/ctf/{web,rev,pwn,crypto,forensics}
+
+# Wireshark + группы
+sudo dpkg-reconfigure wireshark-common -f noninteractive
+sudo usermod -a -G wireshark $USER
+sudo usermod -aG docker $USER 2>/dev/null || true
+
+# Tor
+sudo systemctl enable tor --now
+
+# Алиасы
+cat >> ~/.zshrc << 'ALIASEOF'
+alias nmap-full="sudo nmap -sS -sC -sV -O -p- -T4"
+alias listen-nc="sudo rlwrap nc -lvnp"
+alias msfconsole='sudo msfconsole -q'
+alias update-all="sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y"
+ALIASEOF
+
+# Wordlists
+if [ -f /usr/share/wordlists/rockyou.txt.gz ]; then
+    sudo gunzip /usr/share/wordlists/rockyou.txt.gz
+fi
+
+# SSH
+[ ! -f "$HOME/.ssh/id_rsa" ] && ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+
+print_success "ГОТОВО! Перезагрузись: sudo reboot"
+EOF
+
+chmod +x kali_setup.sh
+./kali_setup.sh

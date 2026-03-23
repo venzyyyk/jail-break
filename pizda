@@ -330,5 +330,138 @@ print_warning "НЕ ЗАБУДЬ ПЕРЕЗАГРУЗИТЬ СИСТЕМУ!"
 echo ""
 
 # ============================================================
+# ФАЗА 20: WI-FI АТАКИ (ПОЛНЫЙ НАБОР)
+# ============================================================
+print_status "Установка инструментов Wi-Fi..."
+sudo apt install -y wifite kismet mdk4 hostapd dnsmasq isc-dhcp-server
+git clone https://github.com/FluxionNetwork/fluxion.git /opt/fluxion 2>/dev/null || true
+git clone https://github.com/v1s1t0r1sh3r3/airgeddon.git /opt/airgeddon 2>/dev/null || true
+
+# ============================================================
+# ФАЗА 21: ACTIVE DIRECTORY (ВЗЛОМ WINDOWS ДОМЕНА)
+# ============================================================
+print_status "Установка AD-инструментов..."
+sudo apt install -y crackmapexec ldapdomaindump bloodhound python3-impacket
+go install github.com/ropnop/kerbrute@latest
+pip3 install certipy-ad
+git clone https://github.com/SecureAuthCorp/impacket.git /opt/impacket 2>/dev/null || true
+cd /opt/impacket && pip3 install . 2>/dev/null || true
+cd ~
+
+# ============================================================
+# ФАЗА 22: WEB ПЕНТЕСТ (РАСШИРЕННЫЙ)
+# ============================================================
+print_status "Установка Web-инструментов..."
+sudo apt install -y feroxbuster whatweb
+pip3 install xsstrike commix jwt-tool arjun paramspider crlfuzz
+git clone https://github.com/urbanadventurer/WhatWeb.git /opt/whatweb 2>/dev/null || true
+git clone https://github.com/s0md3v/XSStrike.git /opt/XSStrike 2>/dev/null || true
+git clone https://github.com/commixproject/commix.git /opt/commix 2>/dev/null || true
+
+# ============================================================
+# ФАЗА 23: РЕВЕРС-ИНЖИНИРИНГ И ЭКСПЛОЙТЫ
+# ============================================================
+print_status "Установка реверс-инструментов..."
+sudo apt install -y gdb gdb-multiarch radare2 cutter pwndbg
+pip3 install pwntools angr ropper one_gadget seccomp-tools
+git clone https://github.com/longld/peda.git /opt/peda 2>/dev/null || true
+git clone https://github.com/hugsy/gef.git /opt/gef 2>/dev/null || true
+echo "source /opt/peda/peda.py" >> ~/.gdbinit
+echo "source /opt/gef/gef.py" >> ~/.gdbinit
+
+# ============================================================
+# ФАЗА 24: OSINT (МАКСИМАЛЬНО)
+# ============================================================
+print_status "Установка OSINT-инструментов..."
+sudo apt install -y spiderfoot
+pip3 install maigret holehe instaloader
+git clone https://github.com/twintproject/twint.git /opt/twint 2>/dev/null || true
+cd /opt/twint && pip3 install . 2>/dev/null || true
+cd ~
+git clone https://github.com/sherlock-project/sherlock.git /opt/sherlock 2>/dev/null || true
+git clone https://github.com/laramies/theHarvester.git /opt/theHarvester 2>/dev/null || true
+cd /opt/theHarvester && pip3 install -r requirements.txt 2>/dev/null || true
+cd ~
+
+# ============================================================
+# ФАЗА 25: PRIVESC (ЛИНУКС + ВИНДОВС)
+# ============================================================
+print_status "Установка privesc-инструментов..."
+sudo apt install -y pspy
+git clone https://github.com/carlospolop/PEASS-ng.git /opt/peass 2>/dev/null || true
+git clone https://github.com/DominicBreuker/pspy.git /opt/pspy 2>/dev/null || true
+git clone https://github.com/jpillora/chisel.git /opt/chisel 2>/dev/null || true
+cd /opt/chisel && go build 2>/dev/null || true
+cd ~
+go install github.com/nicocha30/ligolo-ng@latest
+
+# ============================================================
+# ФАЗА 26: ТУННЕЛИ, C2, ПРОКСИ
+# ============================================================
+print_status "Установка туннельных инструментов..."
+sudo apt install -y proxychains4 tor obfs4proxy
+git clone https://github.com/BishopFox/sliver.git /opt/sliver 2>/dev/null || true
+cd /opt/sliver && make 2>/dev/null || true
+cd ~
+wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+tar -xzf ngrok-v3-stable-linux-amd64.tgz
+sudo mv ngrok /usr/local/bin/
+rm ngrok-v3-stable-linux-amd64.tgz
+git clone https://github.com/fatedier/frp.git /opt/frp 2>/dev/null || true
+git clone https://github.com/gentilkiwi/mimikatz.git /opt/mimikatz 2>/dev/null || true
+
+# ============================================================
+# ФАЗА 27: МОБИЛЬНЫЙ ПЕНТЕСТ (ANDROID/IOS)
+# ============================================================
+print_status "Установка мобильных инструментов..."
+sudo apt install -y apktool dex2jar jadx
+pip3 install objection frida-tools
+wget -q https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.0.3_build/ghidra_11.0.3_PUBLIC_20240410.zip
+unzip -q ghidra_11.0.3_PUBLIC_20240410.zip -d /opt/
+rm ghidra_11.0.3_PUBLIC_20240410.zip
+
+# ============================================================
+# ФАЗА 28: СЕТЕВЫЕ АТАКИ (MITM, SPOOFING)
+# ============================================================
+print_status "Установка сетевых инструментов..."
+sudo apt install -y ettercap-graphical dsniff macchanger responder
+git clone https://github.com/SpiderLabs/Responder.git /opt/responder 2>/dev/null || true
+git clone https://github.com/Kkevsterrr/evilginx2.git /opt/evilginx2 2>/dev/null || true
+cd /opt/evilginx2 && go build 2>/dev/null || true
+cd ~
+
+# ============================================================
+# ФАЗА 29: ДОП. БРУТФОРС И ПАРОЛИ
+# ============================================================
+print_status "Установка брутфорс-инструментов..."
+sudo apt install -y medusa ncrack crowbar patator
+pip3 install thc-hydra
+
+# ============================================================
+# ФАЗА 30: DOCKER ДЛЯ ИЗОЛИРОВАННЫХ СРЕД
+# ============================================================
+print_status "Установка Docker..."
+sudo apt install -y docker.io docker-compose
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+
+# ============================================================
+# ФАЗА 31: СКАЧИВАНИЕ ТОПОВЫХ СЛОВАРЕЙ
+# ============================================================
+print_status "Скачивание дополнительных wordlist..."
+cd /usr/share/wordlists
+sudo wget -q https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/10-million-password-list-top-1000000.txt -O million-passwords.txt
+sudo wget -q https://raw.githubusercontent.com/berzerk0/Probable-Wordlists/master/Real-Passwords/Top12Thousand-probable-v2.txt -O probable-passwords.txt
+sudo gunzip /usr/share/wordlists/rockyou.txt.gz 2>/dev/null || true
+cd ~
+
+# ============================================================
+# ФАЗА 32: АВТОМАТИЧЕСКИЙ ПЕРЕЗАПУСК (опционально)
+# ============================================================
+read -p "Все инструменты установлены. Перезагрузить сейчас? (y/N): " reboot_now
+if [[ $reboot_now =~ ^[Yy]$ ]]; then
+    sudo reboot
+fi
+# ============================================================
 # КОНЕЦ
 # ============================================================

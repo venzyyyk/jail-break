@@ -1,1 +1,334 @@
+#!/bin/bash
 
+# ============================================================
+# SWILL: KALI LINUX ULTIMATE PENTEST SETUP SCRIPT
+# Запуск: chmod +x kali_setup.sh && ./kali_setup.sh
+# ВНИМАНИЕ: Работает на Kali Linux (проверено на 2024.x)
+# ============================================================
+
+set -e  # Останавливаем скрипт при любой ошибке
+
+# Цвета для вывода
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+print_status() {
+    echo -e "${BLUE}[*]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[+]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[!]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+# ============================================================
+# ФАЗА 1: ОБНОВЛЕНИЕ СИСТЕМЫ
+# ============================================================
+print_status "Обновление системы..."
+sudo apt update && sudo apt full-upgrade -y
+sudo apt autoremove --purge -y
+
+# ============================================================
+# ФАЗА 2: УСТАНОВКА ЯДРА LIQUORIX (опционально)
+# ============================================================
+read -p "Установить ядро Liquorix (ниже пинг, выше производительность)? (y/N): " install_liquorix
+if [[ $install_liquorix =~ ^[Yy]$ ]]; then
+    print_status "Установка ядра Liquorix..."
+    echo 'deb http://liquorix.net/debian bookworm main' | sudo tee /etc/apt/sources.list.d/liquorix.list
+    wget -O- 'https://liquorix.net/keys/liquorix-keyring.gpg' | sudo apt-key add -
+    sudo apt update && sudo apt install -y linux-image-liquorix-amd64 linux-headers-liquorix-amd64
+    print_success "Ядро Liquorix установлено"
+fi
+
+# ============================================================
+# ФАЗА 3: УСТАНОВКА ZSH, TMUX, УТИЛИТ
+# ============================================================
+print_status "Установка терминальных утилит..."
+sudo apt install -y zsh fzf bat exa ripgrep tmux curl wget git python3-pip ruby-full
+
+# Установка Oh-My-Zsh
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    print_status "Установка Oh-My-Zsh..."
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+# Установка Powerlevel10k
+if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
+    print_status "Установка Powerlevel10k..."
+    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
+fi
+
+# Установка плагинов ZSH
+print_status "Установка плагинов ZSH..."
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting 2>/dev/null || true
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions 2>/dev/null || true
+git clone https://github.com/zdharma-continuum/fast-syntax-highlighting ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/fast-syntax-highlighting 2>/dev/null || true
+
+# Настройка плагинов в .zshrc
+sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting fast-syntax-highlighting docker docker-compose kali tmux)/' ~/.zshrc
+
+# ============================================================
+# ФАЗА 4: НАСТРОЙКА TMUX
+# ============================================================
+print_status "Настройка TMUX..."
+cat > ~/.tmux.conf << 'EOF'
+set -g mouse on
+set -g history-limit 50000
+set -g default-terminal "screen-256color"
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+bind r source-file ~/.tmux.conf
+set -g status-bg black
+set -g status-fg white
+set -g status-left "#[fg=green]#S #[fg=white]|"
+set -g status-right "#[fg=yellow]%H:%M #[fg=cyan]%d-%b-%y"
+EOF
+
+# ============================================================
+# ФАЗА 5: УСТАНОВКА ИНСТРУМЕНТОВ ПЕНТЕСТА
+# ============================================================
+print_status "Установка основных пентест-инструментов..."
+sudo apt install -y \
+    nmap \
+    wireshark \
+    metasploit-framework \
+    burpsuite \
+    sqlmap \
+    hydra \
+    john \
+    hashcat \
+    aircrack-ng \
+    gobuster \
+    dirb \
+    ffuf \
+    nikto \
+    wpscan \
+    enum4linux \
+    smbclient \
+    impacket-scripts \
+    bloodhound \
+    evil-winrm \
+    seclists \
+    wordlists \
+    exploitdb \
+    bettercap \
+    hcxdumptool \
+    hcxtools \
+    theharvester \
+    recon-ng \
+    maltego \
+    photon \
+    shellter \
+    upx \
+    rlwrap \
+    netcat-traditional \
+    socat
+
+# ============================================================
+# ФАЗА 6: УСТАНОВКА GO И ИНСТРУМЕНТОВ
+# ============================================================
+if ! command -v go &> /dev/null; then
+    print_status "Установка Go..."
+    wget -q https://go.dev/dl/go1.22.0.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz
+    rm go1.22.0.linux-amd64.tar.gz
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.zshrc
+    export PATH=$PATH:/usr/local/go/bin
+fi
+
+print_status "Установка Go-инструментов..."
+go install -v github.com/tomnomnom/gf@latest 2>/dev/null || true
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest 2>/dev/null || true
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest 2>/dev/null || true
+go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest 2>/dev/null || true
+go install -v github.com/OWASP/Amass/v3/...@master 2>/dev/null || true
+go install -v github.com/tomnomnom/waybackurls@latest 2>/dev/null || true
+go install -v github.com/tomnomnom/qsreplace@latest 2>/dev/null || true
+go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest 2>/dev/null || true
+go install -v github.com/tomnomnom/anew@latest 2>/dev/null || true
+go install -v github.com/hahwul/dalfox/v2@latest 2>/dev/null || true
+go install -v github.com/projectdiscovery/katana/cmd/katana@latest 2>/dev/null || true
+
+# Копируем GF patterns
+if [ -d "$HOME/go/pkg/mod/github.com/tomnomnom/gf@*/examples" ]; then
+    cp -r ~/go/pkg/mod/github.com/tomnomnom/gf@*/examples ~/.gf 2>/dev/null || true
+fi
+
+# ============================================================
+# ФАЗА 7: НАСТРОЙКА PATH
+# ============================================================
+if ! grep -q 'export PATH=\$PATH:\$HOME/go/bin' ~/.zshrc; then
+    echo 'export PATH=$PATH:$HOME/go/bin' >> ~/.zshrc
+fi
+
+# ============================================================
+# ФАЗА 8: СОЗДАНИЕ СТРУКТУРЫ ПАПОК
+# ============================================================
+print_status "Создание структуры папок..."
+mkdir -p ~/pentest/{recon,exploit,privesc,reports,wordlists,tools,notes}
+mkdir -p ~/ctf/{web,rev,pwn,crypto,forensics}
+mkdir -p ~/tools/{recon,scanners,exploits,priv,osint}
+
+# ============================================================
+# ФАЗА 9: АЛИАСЫ
+# ============================================================
+print_status "Добавление алиасов..."
+cat >> ~/.zshrc << 'EOF'
+
+# ============================================================
+# PENTEST ALIASES
+# ============================================================
+
+# Recon
+alias nmap-fast="sudo nmap -sS -sV -T4 -F"
+alias nmap-full="sudo nmap -sS -sC -sV -O -p- -T4"
+alias nmap-udp="sudo nmap -sU -sV -T4 -F"
+
+# Web
+alias ffuf-recursive="ffuf -recursion -recursion-depth 3 -c -v"
+alias dirsearch="python3 /usr/share/dirsearch/dirsearch.py"
+
+# Listeners
+alias listen-http="sudo python3 -m http.server 80"
+alias listen-https="sudo python3 -m http.server 443"
+alias listen-nc="sudo nc -lvnp"
+alias rshell="sudo rlwrap nc -lvnp"
+
+# Windows
+alias smb-server="sudo impacket-smbserver share . -smb2support"
+alias winrm="evil-winrm -i"
+
+# Metasploit
+alias msfconsole='sudo msfconsole -q'
+
+# Utils
+alias update-all="sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y"
+alias extract="7z x"
+alias ip="curl -s ifconfig.me"
+alias ports="sudo netstat -tulpn"
+alias webserver="php -S 0.0.0.0:8000"
+alias listen-all="sudo netstat -tulpn | grep LISTEN"
+EOF
+
+# ============================================================
+# ФАЗА 10: НАСТРОЙКА PROXYCHAINS И TOR
+# ============================================================
+print_status "Настройка proxychains и Tor..."
+sudo sed -i 's/#dynamic_chain/dynamic_chain/' /etc/proxychains4.conf
+sudo sed -i 's/strict_chain/#strict_chain/' /etc/proxychains4.conf
+if ! grep -q "socks4 127.0.0.1 9050" /etc/proxychains4.conf; then
+    echo "socks4 127.0.0.1 9050" | sudo tee -a /etc/proxychains4.conf
+fi
+sudo systemctl enable tor --now
+
+# ============================================================
+# ФАЗА 11: НАСТРОЙКА METASPLOIT
+# ============================================================
+print_status "Настройка Metasploit..."
+sudo msfdb init 2>/dev/null || true
+
+# ============================================================
+# ФАЗА 12: РАСПАКОВКА СЛОВАРЕЙ
+# ============================================================
+print_status "Распаковка wordlists..."
+if [ -f /usr/share/wordlists/rockyou.txt.gz ]; then
+    sudo gunzip /usr/share/wordlists/rockyou.txt.gz 2>/dev/null || true
+    print_success "Rockyou распакован"
+fi
+
+# ============================================================
+# ФАЗА 13: УСТАНОВКА VEIL (опционально)
+# ============================================================
+read -p "Установить Veil (обфускация пэйлоадов, может долго)? (y/N): " install_veil
+if [[ $install_veil =~ ^[Yy]$ ]]; then
+    print_status "Установка Veil..."
+    cd /opt
+    sudo git clone https://github.com/Veil-Framework/Veil.git 2>/dev/null || true
+    cd Veil
+    sudo ./Install.sh -c
+    cd ~
+fi
+
+# ============================================================
+# ФАЗА 14: ГЕНЕРАЦИЯ SSH КЛЮЧА
+# ============================================================
+if [ ! -f "$HOME/.ssh/id_rsa" ]; then
+    print_status "Генерация SSH ключа..."
+    ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+fi
+
+# ============================================================
+# ФАЗА 15: НАСТРОЙКА WIRESHARK (разрешить non-root)
+# ============================================================
+print_status "Настройка Wireshark..."
+sudo dpkg-reconfigure wireshark-common -f noninteractive
+sudo usermod -a -G wireshark $USER
+
+# ============================================================
+# ФАЗА 16: ДОБАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ В ГРУППЫ
+# ============================================================
+print_status "Добавление пользователя в группы..."
+sudo usermod -aG sudo,netdev,plugdev,wireshark $USER
+
+# ============================================================
+# ФАЗА 17: ФИНАЛЬНАЯ НАСТРОЙКА ZSH
+# ============================================================
+print_status "Применение настроек ZSH..."
+source ~/.zshrc 2>/dev/null || true
+
+# ============================================================
+# ФАЗА 18: СКРИПТ ДЛЯ БЭКАПА
+# ============================================================
+cat > ~/backup_pentest.sh << 'EOF'
+#!/bin/bash
+BACKUP_DIR=~/backups/$(date +%Y%m%d)
+mkdir -p $BACKUP_DIR
+cp -r ~/.zshrc ~/.tmux.conf ~/pentest $BACKUP_DIR/ 2>/dev/null || true
+dpkg --get-selections > $BACKUP_DIR/packages.txt
+echo "Бэкап сохранен в $BACKUP_DIR"
+EOF
+chmod +x ~/backup_pentest.sh
+
+# ============================================================
+# ФАЗА 19: ВЫВОД ИНФОРМАЦИИ
+# ============================================================
+print_success "=========================================="
+print_success "НАСТРОЙКА ЗАВЕРШЕНА!"
+print_success "=========================================="
+echo ""
+print_status "Что нужно сделать вручную:"
+echo "  1. Перезагрузи систему: sudo reboot"
+echo "  2. После перезагрузки запусти: p10k configure (настройка темы)"
+echo "  3. Скачай шрифт FiraCode Nerd Font для терминала"
+echo ""
+print_status "Твои рабочие папки:"
+echo "  ~/pentest/     - для пентестов"
+echo "  ~/ctf/         - для CTF"
+echo "  ~/tools/       - дополнительные инструменты"
+echo ""
+print_status "Полезные команды:"
+echo "  nmap-full <IP>     - полное сканирование"
+echo "  listen-nc 4444     - слушать порт"
+echo "  msfconsole         - запуск Metasploit"
+echo "  update-all         - обновление системы"
+echo "  ip                 - показать внешний IP"
+echo ""
+print_warning "НЕ ЗАБУДЬ ПЕРЕЗАГРУЗИТЬ СИСТЕМУ!"
+echo ""
+
+# ============================================================
+# КОНЕЦ
+# ============================================================

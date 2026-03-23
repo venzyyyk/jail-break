@@ -224,9 +224,10 @@ alias listen-all="sudo netstat -tulpn | grep LISTEN"
 EOF
 
 # ============================================================
-# ФАЗА 10: НАСТРОЙКА PROXYCHAINS И TOR
+# ФАЗА 9: PROXYCHAINS + TOR (ТЕПЕРЬ TOR СТАВИТСЯ)
 # ============================================================
 print_status "Настройка proxychains и Tor..."
+sudo apt install -y tor proxychains4 obfs4proxy
 sudo sed -i 's/#dynamic_chain/dynamic_chain/' /etc/proxychains4.conf
 sudo sed -i 's/strict_chain/#strict_chain/' /etc/proxychains4.conf
 if ! grep -q "socks4 127.0.0.1 9050" /etc/proxychains4.conf; then
